@@ -1,95 +1,127 @@
-import { configureStore, createSlice } from '@reduxjs/toolkit';
-import { useDispatch, useSelector } from 'react-redux';
+import { create } from 'zustand';
 import { Timer } from '../types/timer';
-import { useEffect } from 'react';
+import { nanoid } from 'nanoid';
 
-const initialState = {
-  timers: [] as Timer[],
+const STORAGE_KEY = 'timers';
+
+// Load timers from localStorage
+const loadTimers = (): Timer[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const timers: Timer[] = stored ? JSON.parse(stored) : [];
+
+    // Reset any ended timers and stop running timers
+    return timers.map((timer) => ({
+      ...timer,
+      isRunning: false,
+      remainingTime:
+        timer.remainingTime <= 0 ? timer.duration : timer.remainingTime,
+    }));
+  } catch (error) {
+    console.error('Failed to load timers:', error);
+    return [];
+  }
 };
 
-const timerSlice = createSlice({
-  name: 'timer',
-  initialState,
-  reducers: {
-    addTimer: (state, action) => {
-      state.timers.push({
-        ...action.payload,
-        id: crypto.randomUUID(),
-        createdAt: Date.now(),
-      });
-    },
-    deleteTimer: (state, action) => {
-      state.timers = state.timers.filter(timer => timer.id !== action.payload);
-    },
-    toggleTimer: (state, action) => {
-      const timer = state.timers.find(timer => timer.id === action.payload);
-      if (timer) {
-        timer.isRunning = !timer.isRunning;
-      }
-    },
-    updateTimer: (state, action) => {
-      const timer = state.timers.find(timer => timer.id === action.payload);
-      if (timer && timer.isRunning) {
-        timer.remainingTime -= 1;
-        timer.isRunning = timer.remainingTime > 0;
-      }
-    },
-    restartTimer: (state, action) => {
-      const timer = state.timers.find(timer => timer.id === action.payload);
-      if (timer) {
-        timer.remainingTime = timer.duration;
-        timer.isRunning = false;
-      }
-    },
-    editTimer: (state, action) => {
-      const timer = state.timers.find(timer => timer.id === action.payload.id);
-      if (timer) {
-        Object.assign(timer, action.payload.updates);
-        timer.remainingTime = action.payload.updates.duration || timer.duration;
-        timer.isRunning = false;
-      }
-    },
+// Save timers to localStorage
+const saveTimers = (timers: Timer[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(timers));
+  } catch (error) {
+    console.error('Failed to save timers:', error);
+  }
+};
+
+interface TimerStore {
+  timers: Timer[];
+  addTimer: (timer: Omit<Timer, 'id'>) => void;
+  deleteTimer: (id: string) => void;
+  updateTimer: (id: string) => void;
+  editTimer: (id: string, updates: Partial<Omit<Timer, 'id'>>) => void;
+  toggleTimer: (id: string) => void;
+  restartTimer: (id: string) => void;
+}
+
+export const useTimerStore = create<TimerStore>((set, get) => ({
+  timers: loadTimers(),
+
+  addTimer: (timer) => {
+    set((state) => {
+      const newTimers = [...state.timers, { ...timer, id: nanoid() }];
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
   },
-});
 
-const store = configureStore({
-  reducer: timerSlice.reducer,
-});
+  deleteTimer: (id) => {
+    set((state) => {
+      const newTimers = state.timers.filter((t) => t.id !== id);
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
+  },
 
-export { store };
-
-export const {
-  addTimer,
-  deleteTimer,
-  toggleTimer,
-  updateTimer,
-  restartTimer,
-  editTimer,
-} = timerSlice.actions;
-
-export const useTimerStore = () => {
-  const dispatch = useDispatch();
-  const timers = useSelector((state: { timers: Timer[] }) => state.timers);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      timers.forEach((timer) => {
-        if (timer.isRunning) {
-          dispatch(updateTimer(timer.id));
+  updateTimer: (id) => {
+    set((state) => {
+      const newTimers = state.timers.map((timer) => {
+        if (timer.id === id && timer.isRunning) {
+          const newRemainingTime = Math.max(0, timer.remainingTime - 1);
+          return { ...timer, remainingTime: newRemainingTime };
         }
+        return timer;
       });
-    }, 1000);
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
+  },
 
-    return () => clearInterval(interval);
-  }, [dispatch, timers]);
+  editTimer: (id, updates) => {
+    set((state) => {
+      const newTimers = state.timers.map((timer) => {
+        if (timer.id === id) {
+          return {
+            ...timer,
+            ...updates,
+            remainingTime: updates.duration ?? timer.duration,
+          };
+        }
+        return timer;
+      });
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
+  },
 
-  return {
-    timers,
-    addTimer: (timer: Omit<Timer, 'id' | 'createdAt'>) => dispatch(addTimer(timer)),
-    deleteTimer: (id: string) => dispatch(deleteTimer(id)),
-    toggleTimer: (id: string) => dispatch(toggleTimer(id)),
-    updateTimer: (id: string) => dispatch(updateTimer(id)),
-    restartTimer: (id: string) => dispatch(restartTimer(id)),
-    editTimer: (id: string, updates: Partial<Timer>) => dispatch(editTimer({ id, updates })),
-  };
-};
+  toggleTimer: (id) => {
+    set((state) => {
+      const newTimers = state.timers.map((timer) => {
+        if (timer.id === id) {
+          return { ...timer, isRunning: !timer.isRunning };
+        }
+        return timer;
+      });
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
+  },
+
+  restartTimer: (id) => {
+    set((state) => {
+      const newTimers = state.timers.map((timer) => {
+        if (timer.id === id) {
+          return {
+            ...timer,
+            remainingTime: timer.duration,
+            isRunning: false,
+          };
+        }
+        return timer;
+      });
+      saveTimers(newTimers);
+      return { timers: newTimers };
+    });
+  },
+}));
+
+// Export the store instance for direct access
+export const store = useTimerStore;
