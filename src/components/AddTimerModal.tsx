@@ -8,7 +8,10 @@ interface AddTimerModalProps {
   onClose: () => void;
 }
 
-export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose }) => {
+export const AddTimerModal: React.FC<AddTimerModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [hours, setHours] = useState(0);
@@ -20,20 +23,20 @@ export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose })
     minutes: false,
     seconds: false,
   });
-  
+
   const { addTimer } = useTimerStore();
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateTimerForm({ title, description, hours, minutes, seconds })) {
       return;
     }
 
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    
+
     addTimer({
       title: title.trim(),
       description: description.trim(),
@@ -77,14 +80,14 @@ export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose })
             <Clock className="w-5 h-5 text-blue-600" />
             <h2 className="text-xl font-semibold">Add New Timer</h2>
           </div>
-          <button 
+          <button
             onClick={handleClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -96,7 +99,7 @@ export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose })
               onChange={(e) => setTitle(e.target.value)}
               onBlur={() => setTouched({ ...touched, title: true })}
               maxLength={50}
-              className={` ${
+              className={`border border-gray-300 w-full rounded-md shadow-sm px-3 py-2  ${
                 touched.title && !isTitleValid
                   ? 'border-red-500'
                   : 'border-gray-300'
@@ -112,7 +115,7 @@ export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose })
               {title.length}/50 characters
             </p>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
@@ -121,60 +124,75 @@ export const AddTimerModal: React.FC<AddTimerModalProps> = ({ isOpen, onClose })
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className=""
+              className="border border-gray-300 w-full px-3 py-2 rounded-md shadow-sm "
               placeholder="Enter timer description (optional)"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Duration <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Hours</label>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Hours
+                </label>
                 <input
                   type="number"
                   min="0"
                   max="23"
                   value={hours}
-                  onChange={(e) => setHours(Math.min(23, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setHours(Math.min(23, parseInt(e.target.value) || 0))
+                  }
                   onBlur={() => setTouched({ ...touched, hours: true })}
-                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2 "
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm "
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Minutes</label>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Minutes
+                </label>
                 <input
                   type="number"
                   min="0"
                   max="59"
                   value={minutes}
-                  onChange={(e) => setMinutes(Math.min(59, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setMinutes(Math.min(59, parseInt(e.target.value) || 0))
+                  }
                   onBlur={() => setTouched({ ...touched, minutes: true })}
-                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2"
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm "
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Seconds</label>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Seconds
+                </label>
                 <input
                   type="number"
                   min="0"
                   max="59"
                   value={seconds}
-                  onChange={(e) => setSeconds(Math.min(59, parseInt(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setSeconds(Math.min(59, parseInt(e.target.value) || 0))
+                  }
                   onBlur={() => setTouched({ ...touched, seconds: true })}
-                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm "
                 />
               </div>
             </div>
-            {touched.hours && touched.minutes && touched.seconds && !isTimeValid && (
-              <p className="mt-2 text-sm text-red-500">
-                Please set a duration greater than 0
-              </p>
-            )}
+            {touched.hours &&
+              touched.minutes &&
+              touched.seconds &&
+              !isTimeValid && (
+                <p className="mt-2 text-sm text-red-500">
+                  Please set a duration greater than 0
+                </p>
+              )}
           </div>
-          
+
           <div className="flex justify-end gap-3 pt-4 border-t">
             <button
               type="button"

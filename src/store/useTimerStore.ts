@@ -1,6 +1,7 @@
 import { configureStore, createSlice } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
 import { Timer } from '../types/timer';
+import { useEffect } from 'react';
 
 const initialState = {
   timers: [] as Timer[],
@@ -69,6 +70,18 @@ export const {
 export const useTimerStore = () => {
   const dispatch = useDispatch();
   const timers = useSelector((state: { timers: Timer[] }) => state.timers);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      timers.forEach((timer) => {
+        if (timer.isRunning) {
+          dispatch(updateTimer(timer.id));
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [dispatch, timers]);
 
   return {
     timers,
